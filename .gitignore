@@ -7,3 +7,12 @@ venv/
 *.egg-info/
 dist/
 .superpowers/
+.DS_Store
+.pytest_cache/
+*.log
+*.wav
+*.mp3
+*.flac
+.coverage
+htmlcov/
+docker-compose.override.yml
