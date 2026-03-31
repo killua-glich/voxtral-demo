@@ -55,9 +55,9 @@ def _build_kwargs(text: str, voice: str, speed: float, ref_audio_path: str | Non
     kwargs: dict = {"text": text, "voice": voice}
     if speed != 1.0:
         kwargs["speed"] = speed
-    if ref_audio_path:
+    if ref_audio_path is not None:
         kwargs["ref_audio"] = ref_audio_path
-    if ref_text:
+    if ref_text is not None:
         kwargs["ref_text"] = ref_text
     return kwargs
 

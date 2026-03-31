@@ -55,3 +55,5 @@ def test_generate_stream_yields_bytes():
 
     assert len(chunks) == 2
     assert all(isinstance(c, bytes) for c in chunks)
+    # Each chunk must be float32 PCM: 4800 samples × 4 bytes = 19200 bytes
+    assert all(len(c) == 4800 * 4 for c in chunks)
