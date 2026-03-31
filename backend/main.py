@@ -14,10 +14,10 @@ ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm"}
 
 def _check_audio_ext(filename: str) -> None:
     ext = os.path.splitext(filename)[1].lower()
-    if ext not in ALLOWED_AUDIO_EXTENSIONS:
+    if not ext or ext not in ALLOWED_AUDIO_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported format '{ext}'. Allowed: {sorted(ALLOWED_AUDIO_EXTENSIONS)}",
+            detail=f"Unsupported format '{ext or '(none)'}'. Allowed: {sorted(ALLOWED_AUDIO_EXTENSIONS)}",
         )
 
 
@@ -34,7 +34,7 @@ async def transcribe(
     temperature: float = Form(0.0),
     diarize: bool = Form(False),
 ):
-    _check_audio_ext(audio.filename or ".wav")
+    _check_audio_ext(audio.filename or "")
     if model not in ("mini", "small"):
         raise HTTPException(status_code=400, detail="model must be 'mini' or 'small'")
 
@@ -52,7 +52,7 @@ async def transcribe(
 
 @app.post("/tts")
 async def text_to_speech(
-    text: str = Form(""),
+    text: str = Form(...),
     voice: str = Form("casual_male"),
     language: str = Form("en"),
     speed: float = Form(1.0),
@@ -69,7 +69,7 @@ async def text_to_speech(
     tmp_ref: str | None = None
 
     if ref_audio is not None:
-        _check_audio_ext(ref_audio.filename or ".wav")
+        _check_audio_ext(ref_audio.filename or "")
         ref_bytes = await ref_audio.read()
         suffix = os.path.splitext(ref_audio.filename or ".wav")[1]
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
@@ -77,28 +77,34 @@ async def text_to_speech(
             tmp_ref = f.name
         ref_audio_path = tmp_ref
 
-    try:
-        if stream:
-            def pcm_generator():
+    if stream:
+        _tmp = tmp_ref  # capture for closure
+
+        def pcm_generator():
+            try:
                 for chunk in tts.generate_stream(
                     text=text,
                     voice=voice,
                     speed=speed,
                     ref_audio_path=ref_audio_path,
-                    ref_text=ref_text or None,
+                    ref_text=ref_text if ref_text else None,
                 ):
                     yield chunk
+            finally:
+                if _tmp is not None:
+                    os.unlink(_tmp)
 
-            return StreamingResponse(pcm_generator(), media_type="application/octet-stream")
-        else:
+        return StreamingResponse(pcm_generator(), media_type="application/octet-stream")
+    else:
+        try:
             wav_bytes = tts.generate_full(
                 text=text,
                 voice=voice,
                 speed=speed,
                 ref_audio_path=ref_audio_path,
-                ref_text=ref_text or None,
+                ref_text=ref_text if ref_text else None,
             )
             return Response(content=wav_bytes, media_type="audio/wav")
-    finally:
-        if tmp_ref:
-            os.unlink(tmp_ref)
+        finally:
+            if tmp_ref is not None:
+                os.unlink(tmp_ref)
