@@ -13,5 +13,6 @@ def mock_mlx(monkeypatch):
         "mlx_audio.tts": MagicMock(),
         "mlx_audio.tts.utils": MagicMock(),
     }
-    monkeypatch.setattr(sys, "modules", {**sys.modules, **mocks})
+    for key, value in mocks.items():
+        monkeypatch.setitem(sys.modules, key, value)
     yield
