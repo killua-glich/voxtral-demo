@@ -4,24 +4,28 @@ import sys
 
 
 def _make_stt_module():
-    """Import stt freshly after mocks are in place."""
-    import importlib
+    """Import stt freshly after mocks are in place (depends on mock_mlx autouse fixture)."""
     if "backend.stt" in sys.modules:
         del sys.modules["backend.stt"]
     import backend.stt as stt
     return stt
 
 
-def test_transcribe_returns_expected_keys():
-    stt = _make_stt_module()
+def _make_transcribe_mocks(decoded_text: str):
+    """Return (mock_model, mock_processor) wired for a transcribe call."""
     mock_model = MagicMock()
     mock_processor = MagicMock()
-
-    mock_processor.apply_transcrition_request.return_value = {
+    mock_processor.apply_transcription_request.return_value = {
         "input_ids": MagicMock(shape=(1, 10))
     }
     mock_model.generate.return_value = [list(range(15))]
-    mock_processor.decode.return_value = "hello world"
+    mock_processor.decode.return_value = decoded_text
+    return mock_model, mock_processor
+
+
+def test_transcribe_returns_expected_keys():
+    stt = _make_stt_module()
+    mock_model, mock_processor = _make_transcribe_mocks("hello world")
 
     with patch("backend.stt._model", mock_model), \
          patch("backend.stt._processor", mock_processor), \
@@ -37,13 +41,7 @@ def test_transcribe_returns_expected_keys():
 
 def test_transcribe_strips_whitespace():
     stt = _make_stt_module()
-    mock_model = MagicMock()
-    mock_processor = MagicMock()
-    mock_processor.apply_transcrition_request.return_value = {
-        "input_ids": MagicMock(shape=(1, 10))
-    }
-    mock_model.generate.return_value = [list(range(15))]
-    mock_processor.decode.return_value = "  hello world  "
+    mock_model, mock_processor = _make_transcribe_mocks("  hello world  ")
 
     with patch("backend.stt._model", mock_model), \
          patch("backend.stt._processor", mock_processor), \
@@ -61,3 +59,10 @@ def test_load_model_skips_if_same_key():
          patch("backend.stt.VoxtralForConditionalGeneration") as mock_cls:
         stt.load_model("mini")
         mock_cls.from_pretrained.assert_not_called()
+
+
+def test_load_model_rejects_invalid_key():
+    stt = _make_stt_module()
+    with patch("backend.stt._current_model_key", None):
+        with pytest.raises(ValueError, match="Unknown model key"):
+            stt.load_model("large")

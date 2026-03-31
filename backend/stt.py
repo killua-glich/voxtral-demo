@@ -17,6 +17,8 @@ def load_model(key: str = "mini") -> None:
     global _current_model_key, _model, _processor
     if _current_model_key == key:
         return
+    if key not in MODELS:
+        raise ValueError(f"Unknown model key '{key}'. Valid keys: {list(MODELS.keys())}")
     model_id = MODELS[key]
     _model = VoxtralForConditionalGeneration.from_pretrained(model_id)
     _processor = VoxtralProcessor.from_pretrained(model_id)
@@ -34,13 +36,15 @@ def transcribe(
     load_model(model_key)
 
     suffix = os.path.splitext(filename)[1] or ".wav"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
-        f.write(audio_bytes)
-        tmp_path = f.name
-
+    tmp_path: str | None = None
     try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(audio_bytes)
+            tmp_path = f.name
+
+        # diarize: passed to API for future use; not yet supported by mlx-voxtral
         lang = None if language == "auto" else language
-        inputs = _processor.apply_transcrition_request(
+        inputs = _processor.apply_transcription_request(
             language=lang,
             audio=tmp_path,
         )
@@ -59,4 +63,5 @@ def transcribe(
             "duration_s": 0.0,
         }
     finally:
-        os.unlink(tmp_path)
+        if tmp_path is not None:
+            os.unlink(tmp_path)
