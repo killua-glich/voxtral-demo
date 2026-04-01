@@ -79,7 +79,7 @@ def run_transcribe(audio_input, model_choice, language, temperature, diarize):
 # Tab: Text to Speech
 # ---------------------------------------------------------------------------
 
-def run_tts(text, voice, speed, stream_mode, ref_audio):
+def run_tts(text, voice, language, speed, stream_mode, ref_audio):
     if not text.strip():
         return None, "Text is empty."
 
@@ -91,6 +91,7 @@ def run_tts(text, voice, speed, stream_mode, ref_audio):
     data = {
         "text": text,
         "voice": voice,
+        "language": language,
         "speed": str(speed),
         "stream": "true" if stream_mode else "false",
     }
@@ -153,7 +154,7 @@ with gr.Blocks(title="Voxtral Demo") as demo:
                 model_dd = gr.Dropdown(MODEL_CHOICES, value=MODEL_CHOICES[0], label="Model")
                 lang_dd = gr.Dropdown(LANGUAGE_CHOICES, value="auto", label="Language")
                 temp_sl = gr.Slider(0.0, 1.0, value=0.0, step=0.05, label="Temperature")
-                diarize_cb = gr.Checkbox(label="Speaker diarization (Small model only)")
+                diarize_cb = gr.Checkbox(label="Speaker diarization (Small model only, not yet supported)")
                 transcribe_btn = gr.Button("Transcribe", variant="primary")
             with gr.Column():
                 transcript_out = gr.Textbox(label="Transcript", lines=10, buttons=["copy"])
@@ -169,6 +170,11 @@ with gr.Blocks(title="Voxtral Demo") as demo:
             with gr.Column():
                 text_in = gr.Textbox(label="Text", lines=5, placeholder="Enter text to synthesize…")
                 voice_dd = gr.Dropdown(VOICES, value=VOICES[0] if VOICES else "casual_male", label="Voice")
+                tts_lang_dd = gr.Dropdown(
+                    [lang for lang in LANGUAGE_CHOICES if lang != "auto"],
+                    value="en",
+                    label="Language",
+                )
                 speed_sl = gr.Slider(0.5, 2.0, value=1.0, step=0.1, label="Speed")
                 stream_toggle = gr.Checkbox(label="Streaming mode (compare latency)")
                 ref_audio_in = gr.Audio(
@@ -183,7 +189,7 @@ with gr.Blocks(title="Voxtral Demo") as demo:
 
         tts_btn.click(
             run_tts,
-            inputs=[text_in, voice_dd, speed_sl, stream_toggle, ref_audio_in],
+            inputs=[text_in, voice_dd, tts_lang_dd, speed_sl, stream_toggle, ref_audio_in],
             outputs=[audio_out, status_out],
         )
 
