@@ -5,10 +5,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
 echo "==> Installing backend dependencies..."
-pip install -r backend/requirements.txt
+python3 -m pip install -r backend/requirements.txt
 
 echo "==> Starting FastAPI backend on port 8000..."
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 echo "    Backend PID: $BACKEND_PID"
 trap 'kill "$BACKEND_PID" 2>/dev/null || true' EXIT INT TERM
