@@ -73,6 +73,8 @@ def run_transcribe(audio_input, model_choice, language, temperature, diarize):
         return "❌ Cannot reach backend. Is start.sh running?"
     except httpx.HTTPStatusError as e:
         return f"❌ Backend error {e.response.status_code}: {e.response.text}"
+    except Exception as e:
+        return f"❌ {type(e).__name__}: {e}"
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +127,8 @@ def run_tts(text, voice, language, speed, stream_mode, ref_audio):
         return None, "❌ Cannot reach backend. Is start.sh running?"
     except httpx.HTTPStatusError as e:
         return None, f"❌ Backend error {e.response.status_code}: {e.response.text}"
+    except Exception as e:
+        return None, f"❌ {type(e).__name__}: {e}"
     finally:
         if ref_files:
             for _, (_, fh, _) in ref_files.items():
