@@ -11,6 +11,7 @@ echo "==> Starting FastAPI backend on port 8000..."
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 echo "    Backend PID: $BACKEND_PID"
+trap 'kill "$BACKEND_PID" 2>/dev/null || true' EXIT INT TERM
 
 # Wait for backend to be ready
 echo "==> Waiting for backend..."
@@ -24,6 +25,3 @@ done
 
 echo "==> Starting Gradio frontend via Docker Compose..."
 docker compose up --build
-
-# If docker compose exits, kill the backend
-kill "$BACKEND_PID" 2>/dev/null || true
